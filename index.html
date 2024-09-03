@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Amortización Francesa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f0f4f8;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 800px;
+      margin: 40px auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease-in-out;
+    }
+
+    .container:hover {
+      transform: scale(1.02);
+    }
+
+    h1 {
+      text-align: center;
+      color: #007bff;
+      margin-bottom: 30px;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      color: #555;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 16px;
+      transition: border-color 0.3s ease;
+    }
+
+    input:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.3s ease;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+      transform: translateY(-2px);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      overflow-x: auto;
+      display: block;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #f4f4f4;
+    }
+
+    canvas {
+      margin-top: 20px;
+      width: 100%;
+      height: auto;
+    }
+    /* Responsive design */
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 24px;
+      }
+      button {
+        font-size: 14px;
+        padding: 10px;
+      }
+      label, input {
+        font-size: 14px;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.2/jspdf.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Calculadora de Amortización Francesa</h1>
+
+    <label for="monto">Monto del Préstamo:</label>
+    <input type="number" id="monto" placeholder="Ingrese monto">
+
+    <label for="tasa">Tasa de Interés Anual (%):</label>
+    <input type="number" id="tasa" placeholder="Ingrese tasa de interés">
+
+    <label for="periodos">Número de Periodos:</label>
+    <input type="number" id="periodos" placeholder="Ingrese periodos">
+
+    <button onclick="calcularAmortizacion()">Calcular</button>
+    <h2>Resultados</h2>
+    <table id="resultados">
+      <thead>
+        <tr>
+          <th>Periodo</th>
+          <th>Cuota</th>
+          <th>Intereses</th>
+          <th>Amortización</th>
+          <th>Saldo Remanente</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <canvas id="grafico"></canvas>
+  </div>
+
+  <script>
+    function calcularAmortizacion() {
+      // Obtener valores de entrada
+      const monto = parseFloat(document.getElementById('monto').value);
+      const tasaInteresAnual = parseFloat(document.getElementById('tasa').value) / 100;
+      const periodos = parseInt(document.getElementById('periodos').value);
+      
+      if (isNaN(monto) || isNaN(tasaInteresAnual) || isNaN(periodos)) {
+        alert("Por favor, ingrese valores válidos.");
+        return;
+      }
+
+      const n = 12; // Pagos mensuales
+      const tasaMensual = tasaInteresAnual / n;
+      const cuota = monto * (tasaMensual * Math.pow(1 + tasaMensual, periodos)) / (Math.pow(1 + tasaMensual, periodos) - 1);
+      
+      let saldo = monto;
+      let amortizaciones = [];
+      let intereses = [];
+      let saldos = [];
+
+      const tbody = document.querySelector('#resultados tbody');
+      tbody.innerHTML = ''; // Limpiar tabla
+
+      for (let i = 1; i <= periodos; i++) {
+        const interesPeriodo = saldo * tasaMensual;
+        const amortizacion = cuota - interesPeriodo;
+
+        intereses.push(interesPeriodo);
+        amortizaciones.push(amortizacion);
+        saldos.push(saldo);
+
+        saldo -= amortizacion;
+
+        // Insertar fila en la tabla
+        const row = `<tr>
+          <td>${i}</td>
+          <td>${cuota.toFixed(2)}</td>
+          <td>${interesPeriodo.toFixed(2)}</td>
+          <td>${amortizacion.toFixed(2)}</td>
+          <td>${saldo.toFixed(2)}</td>
+        </tr>`;
+        tbody.insertAdjacentHTML('beforeend', row);
+      }
+
+      // Graficar resultados
+      const ctx = document.getElementById('grafico').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: Array.from({ length: periodos }, (_, i) => i + 1),
+          datasets: [
+            {
+              label: 'Amortización de Capital',
+              data: amortizaciones,
+              borderColor: 'blue',
+              fill: false,
+            },
+            {
+              label: 'Intereses',
+              data: intereses,
+              borderColor: 'red',
+              fill: false,
+            },
+            {
+              label: 'Saldo Remanente',
+              data: saldos,
+              borderColor: 'green',
+              fill: false,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { title: { display: true, text: 'Periodo' } },
+            y: { title: { display: true, text: 'Monto' } }
+          },
+          plugins: {
+            tooltip: {
+              enabled: true,
+              callbacks: {
+                label: function(context) {
+                  return `Valor: ${context.raw.toFixed(2)}`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+
+
